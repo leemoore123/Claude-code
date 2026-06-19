@@ -151,7 +151,6 @@
       enemySpeed: lvl => 60 + (lvl - 1) * 12,               // px/s
       ammo:       lvl => 12 + (lvl - 1) * 3,
       timer:      lvl => Math.max(30, 75 - (lvl - 1) * 6),  // seconds
-      aggro:      lvl => 4 + Math.floor((lvl - 1) * 0.5),   // tiles
       playerSpeed: 140,                                     // px/s, constant
       breakChance: 0.20,                                    // fraction of interior walls
       startLives: 3,
@@ -178,7 +177,6 @@
     let start = { x: 1, y: 1 };
     let exit = { x: 1, y: 1 };
     let player, enemies, bullets;
-    let aggroPx = 0;
 
     const game = {
       level: 1,
@@ -305,7 +303,6 @@
 
       game.ammo = CONFIG.ammo(level);
       game.timeLeft = CONFIG.timer(level);
-      aggroPx = CONFIG.aggro(level) * TILE;
 
       spawnEnemies(CONFIG.enemyCount(level), CONFIG.enemySpeed(level));
       bullets = [];
@@ -478,38 +475,32 @@
 
     function updateEnemies(dt) {
       const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+      const pickValidDir = (e, step, allowReverse) => {
+        const options = allowReverse
+          ? dirs
+          : dirs.filter(d => !(d[0] === -e.dir[0] && d[1] === -e.dir[1]));
+        const valid = options.filter(([dx, dy]) => {
+          const t = tileAtPx(e.x + dx * (e.radius + step), e.y + dy * (e.radius + step));
+          return !isWallTile(t.x, t.y);
+        });
+        const pool = valid.length ? valid : dirs;
+        return pool[(Math.random() * pool.length) | 0];
+      };
+
       for (const e of enemies) {
         if (!e.alive) continue;
-        const toPlayer = Math.hypot(player.x - e.x, player.y - e.y);
-        const chasing = toPlayer <= aggroPx;
         const step = e.speed * dt;
 
-        if (chasing) {
-          // greedy: among non-blocked cardinals, pick the one reducing distance most
-          let bestDir = null, bestScore = Infinity;
-          for (const [dx, dy] of dirs) {
-            const nx = e.x + dx * step, ny = e.y + dy * step;
-            const t = tileAtPx(nx + dx * e.radius, ny + dy * e.radius);
-            if (isWallTile(t.x, t.y)) continue;
-            const d = Math.hypot(player.x - nx, player.y - ny);
-            if (d < bestScore) { bestScore = d; bestDir = [dx, dy]; }
-          }
-          if (bestDir) e.dir = bestDir;
-        }
+        // Random wandering: occasionally change to a new direction even without
+        // hitting a wall, so movement doesn't lock into straight corridors and
+        // never tracks the player.
+        if (Math.random() < dt * 1.5) e.dir = pickValidDir(e, step, false);
 
-        // try to move in current dir; if blocked, pick a new random valid dir (patrol)
+        // Move in current dir; if blocked, pick a new random valid dir.
         const before = { x: e.x, y: e.y };
         moveActor(e, e.dir[0] * step, e.dir[1] * step);
         const moved = Math.hypot(e.x - before.x, e.y - before.y);
-        if (moved < step * 0.5) {
-          const options = dirs.filter(d => !(d[0] === -e.dir[0] && d[1] === -e.dir[1]));
-          const valid = options.filter(([dx, dy]) => {
-            const t = tileAtPx(e.x + dx * (e.radius + step), e.y + dy * (e.radius + step));
-            return !isWallTile(t.x, t.y);
-          });
-          const pool = valid.length ? valid : dirs;
-          e.dir = pool[(Math.random() * pool.length) | 0];
-        }
+        if (moved < step * 0.5) e.dir = pickValidDir(e, step, false);
       }
       enemies = enemies.filter(e => e.alive);
     }
