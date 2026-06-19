@@ -1,0 +1,49 @@
+name: Deploy to GitHub Pages
+
+# Publishes the static game files (index.html, maze.html, tictactoe.html) to
+# GitHub Pages. Runs on pushes to the main branch and the current feature
+# branch, and can be triggered manually from the Actions tab.
+on:
+  push:
+    branches:
+      - main
+      - claude/keen-meitner-ojqomm
+  workflow_dispatch:
+
+# Permissions required for the deploy-pages action.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; don't cancel an in-progress run.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Enable Pages automatically (build type "workflow") so no manual
+          # repo-settings toggle is needed for the first deploy.
+          enablement: true
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The repository root holds the static HTML; nothing to build.
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

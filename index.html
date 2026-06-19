@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tic-Tac-Toe</title>
+  <title>Game Hub</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -24,139 +24,61 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 1.5rem;
+      gap: 2rem;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 1rem;
     }
 
-    h1 { margin: 0; font-weight: 700; letter-spacing: 0.05em; }
+    h1 { margin: 0; font-weight: 700; letter-spacing: 0.05em; font-size: 2.5rem; }
+    .subtitle { margin: -1rem 0 0; opacity: 0.6; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.8rem; }
 
-    #status {
-      font-size: 1.25rem;
-      min-height: 1.5em;
-      font-weight: 600;
-    }
-
-    #board {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      background: var(--board);
-      padding: 8px;
-      border-radius: 12px;
-    }
-
-    .cell {
-      width: 96px;
-      height: 96px;
-      background: var(--cell);
-      border: none;
-      border-radius: 8px;
-      font-size: 3rem;
-      font-weight: 700;
-      cursor: pointer;
+    .menu {
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
       justify-content: center;
-      transition: background 0.15s, transform 0.05s;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 240px;
+      padding: 1.5rem;
+      background: var(--board);
+      border-radius: 16px;
+      text-decoration: none;
       color: var(--text);
+      border: 2px solid transparent;
+      transition: transform 0.12s, border-color 0.15s, background 0.15s;
     }
+    .card:hover { transform: translateY(-4px); border-color: var(--x); background: var(--cell); }
 
-    .cell:hover:not(:disabled) { background: var(--cell-hover); }
-    .cell:active:not(:disabled) { transform: scale(0.95); }
-    .cell.x { color: var(--x); }
-    .cell.o { color: var(--o); }
-    .cell.win { background: #15803d; }
+    .card .icon { font-size: 3rem; line-height: 1; }
+    .card .name { font-size: 1.35rem; font-weight: 700; }
+    .card .desc { font-size: 0.85rem; opacity: 0.7; line-height: 1.4; }
 
-    button#reset {
-      padding: 0.6rem 1.4rem;
-      font-size: 1rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      background: var(--x);
-      color: var(--bg);
-      cursor: pointer;
-    }
-    button#reset:hover { filter: brightness(1.1); }
-
-    @media (max-width: 360px) {
-      .cell { width: 72px; height: 72px; font-size: 2.25rem; }
-    }
+    .card.maze:hover { border-color: var(--o); }
   </style>
 </head>
 <body>
-  <h1>Tic-Tac-Toe</h1>
-  <div id="status">Player X's turn</div>
-  <div id="board"></div>
-  <button id="reset">New Game</button>
+  <h1>Game Hub</h1>
+  <p class="subtitle">Pick a game</p>
 
-  <script>
-    const boardEl = document.getElementById('board');
-    const statusEl = document.getElementById('status');
-    const resetBtn = document.getElementById('reset');
+  <div class="menu">
+    <a class="card tictactoe" href="tictactoe.html">
+      <span class="icon">⭕</span>
+      <span class="name">Tic-Tac-Toe</span>
+      <span class="desc">Classic 3×3. Play a friend or beat the computer on three difficulty levels.</span>
+    </a>
 
-    const WINS = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-      [0, 4, 8], [2, 4, 6]             // diagonals
-    ];
-
-    let board, currentPlayer, gameOver;
-
-    function init() {
-      board = Array(9).fill('');
-      currentPlayer = 'X';
-      gameOver = false;
-      statusEl.textContent = "Player X's turn";
-      boardEl.innerHTML = '';
-      board.forEach((_, i) => {
-        const cell = document.createElement('button');
-        cell.className = 'cell';
-        cell.dataset.index = i;
-        cell.addEventListener('click', handleMove);
-        boardEl.appendChild(cell);
-      });
-    }
-
-    function handleMove(e) {
-      const i = +e.currentTarget.dataset.index;
-      if (gameOver || board[i]) return;
-
-      board[i] = currentPlayer;
-      const cell = e.currentTarget;
-      cell.textContent = currentPlayer;
-      cell.classList.add(currentPlayer.toLowerCase());
-
-      const winLine = getWinningLine();
-      if (winLine) {
-        gameOver = true;
-        statusEl.textContent = `Player ${currentPlayer} wins! 🎉`;
-        winLine.forEach(idx => boardEl.children[idx].classList.add('win'));
-        return;
-      }
-
-      if (board.every(Boolean)) {
-        gameOver = true;
-        statusEl.textContent = "It's a draw!";
-        return;
-      }
-
-      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      statusEl.textContent = `Player ${currentPlayer}'s turn`;
-    }
-
-    function getWinningLine() {
-      return WINS.find(line => {
-        const [a, b, c] = line;
-        return board[a] && board[a] === board[b] && board[a] === board[c];
-      });
-    }
-
-    resetBtn.addEventListener('click', init);
-    init();
-  </script>
+    <a class="card maze" href="maze.html">
+      <span class="icon">🔫</span>
+      <span class="name">Maze Shooter</span>
+      <span class="desc">Blast through procedurally generated mazes. Shoot enemies and walls. Levels get harder.</span>
+    </a>
+  </div>
 </body>
 </html>
