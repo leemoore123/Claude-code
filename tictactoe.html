@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic-Tac-Toe</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --board: #1e293b;
+      --cell: #334155;
+      --cell-hover: #475569;
+      --x: #38bdf8;
+      --o: #fb7185;
+      --text: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1rem;
+    }
+
+    h1 { margin: 0; font-weight: 700; letter-spacing: 0.05em; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      justify-content: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+    }
+
+    .segmented {
+      display: inline-flex;
+      background: var(--board);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .segmented button {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .segmented button.active { background: var(--x); color: var(--bg); }
+    .segmented button:hover:not(.active) { background: var(--cell); }
+
+    #status {
+      font-size: 1.25rem;
+      min-height: 1.5em;
+      font-weight: 600;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: var(--board);
+      padding: 8px;
+      border-radius: 12px;
+    }
+
+    .cell {
+      width: 96px;
+      height: 96px;
+      background: var(--cell);
+      border: none;
+      border-radius: 8px;
+      font-size: 3rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.05s;
+      color: var(--text);
+    }
+
+    .cell:hover:not(:disabled) { background: var(--cell-hover); }
+    .cell:active:not(:disabled) { transform: scale(0.95); }
+    .cell.x { color: var(--x); }
+    .cell.o { color: var(--o); }
+    .cell.win { background: #15803d; }
+
+    button#reset {
+      padding: 0.6rem 1.4rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background: var(--x);
+      color: var(--bg);
+      cursor: pointer;
+    }
+    button#reset:hover { filter: brightness(1.1); }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 360px) {
+      .cell { width: 72px; height: 72px; font-size: 2.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Mode</label>
+      <div class="segmented" id="mode">
+        <button data-mode="cpu" class="active">vs Computer</button>
+        <button data-mode="2p">2 Players</button>
+      </div>
+    </div>
+    <div class="control-group" id="difficultyGroup">
+      <label>Difficulty</label>
+      <div class="segmented" id="difficulty">
+        <button data-level="easy">Easy</button>
+        <button data-level="medium" class="active">Medium</button>
+        <button data-level="hard">Hard</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status">Player X's turn</div>
+  <div id="board"></div>
+  <button id="reset">New Game</button>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const resetBtn = document.getElementById('reset');
+    const modeEl = document.getElementById('mode');
+    const difficultyEl = document.getElementById('difficulty');
+    const difficultyGroup = document.getElementById('difficultyGroup');
+
+    const HUMAN = 'X';
+    const CPU = 'O';
+
+    const WINS = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6]             // diagonals
+    ];
+
+    let board, currentPlayer, gameOver, locked;
+    let mode = 'cpu';      // 'cpu' | '2p'
+    let difficulty = 'medium'; // 'easy' | 'medium' | 'hard'
+
+    function init() {
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      gameOver = false;
+      locked = false;
+      setStatus(`Player X's turn`);
+      boardEl.innerHTML = '';
+      board.forEach((_, i) => {
+        const cell = document.createElement('button');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.addEventListener('click', () => handleMove(i));
+        boardEl.appendChild(cell);
+      });
+    }
+
+    function setStatus(text) { statusEl.textContent = text; }
+
+    function render(i) {
+      const cell = boardEl.children[i];
+      cell.textContent = board[i];
+      cell.classList.add(board[i].toLowerCase());
+    }
+
+    function handleMove(i) {
+      if (gameOver || locked || board[i]) return;
+      makeMove(i, currentPlayer);
+      if (gameOver) return;
+
+      // In CPU mode, let the computer respond.
+      if (mode === 'cpu' && currentPlayer === CPU) {
+        locked = true;
+        setStatus('Computer is thinking…');
+        setTimeout(cpuMove, 350);
+      }
+    }
+
+    function makeMove(i, player) {
+      board[i] = player;
+      render(i);
+
+      const winLine = getWinningLine(board);
+      if (winLine) {
+        gameOver = true;
+        winLine.forEach(idx => boardEl.children[idx].classList.add('win'));
+        if (mode === 'cpu') {
+          setStatus(player === HUMAN ? 'You win! 🎉' : 'Computer wins! 🤖');
+        } else {
+          setStatus(`Player ${player} wins! 🎉`);
+        }
+        return;
+      }
+
+      if (board.every(Boolean)) {
+        gameOver = true;
+        setStatus("It's a draw!");
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      if (!(mode === 'cpu' && currentPlayer === CPU)) {
+        setStatus(mode === 'cpu' ? 'Your turn' : `Player ${currentPlayer}'s turn`);
+      }
+    }
+
+    function cpuMove() {
+      locked = false;
+      if (gameOver) return;
+      const i = chooseCpuMove();
+      makeMove(i, CPU);
+    }
+
+    function chooseCpuMove() {
+      const empty = board.map((v, i) => v ? null : i).filter(i => i !== null);
+
+      if (difficulty === 'easy') {
+        return randomChoice(empty);
+      }
+      if (difficulty === 'medium') {
+        // 60% optimal, 40% random — beatable but tricky.
+        return Math.random() < 0.6 ? bestMove() : randomChoice(empty);
+      }
+      return bestMove(); // hard = unbeatable
+    }
+
+    function randomChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // Minimax: CPU maximizes, human minimizes.
+    function bestMove() {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < 9; i++) {
+        if (board[i]) continue;
+        board[i] = CPU;
+        const score = minimax(board, 0, false);
+        board[i] = '';
+        if (score > bestScore) {
+          bestScore = score;
+          move = i;
+        }
+      }
+      return move;
+    }
+
+    function minimax(b, depth, isMaximizing) {
+      const line = getWinningLine(b);
+      if (line) {
+        const winner = b[line[0]];
+        return winner === CPU ? 10 - depth : depth - 10;
+      }
+      if (b.every(Boolean)) return 0;
+
+      if (isMaximizing) {
+        let best = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i]) continue;
+          b[i] = CPU;
+          best = Math.max(best, minimax(b, depth + 1, false));
+          b[i] = '';
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i]) continue;
+          b[i] = HUMAN;
+          best = Math.min(best, minimax(b, depth + 1, true));
+          b[i] = '';
+        }
+        return best;
+      }
+    }
+
+    function getWinningLine(b) {
+      return WINS.find(line => {
+        const [a, c, d] = line;
+        return b[a] && b[a] === b[c] && b[a] === b[d];
+      });
+    }
+
+    // --- Control handlers ---
+    modeEl.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      mode = btn.dataset.mode;
+      setActive(modeEl, btn);
+      difficultyGroup.classList.toggle('hidden', mode !== 'cpu');
+      init();
+    });
+
+    difficultyEl.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      difficulty = btn.dataset.level;
+      setActive(difficultyEl, btn);
+      init();
+    });
+
+    function setActive(group, btn) {
+      group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    resetBtn.addEventListener('click', init);
+    init();
+  </script>
+</body>
+</html>
