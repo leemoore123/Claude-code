@@ -123,7 +123,7 @@
     </div>
   </div>
 
-  <p class="hint">Arrow keys to move · Spacebar to shoot · Reach the exit, avoid the enemies</p>
+  <p class="hint">Arrow keys to move · Spacebar to shoot · Grab power-ups · Reach the exit, avoid the enemies</p>
 
   <script>
     // ---------- Config & constants ----------
@@ -156,7 +156,22 @@
       startLives: 3,
       bulletSpeed: 360,                                     // px/s
       invulnTime: 1.2,                                      // seconds after a hit
+      powerupCount: 3,                                      // power-ups per level
+      speedBoost: 1.7,                                      // speed multiplier while active
+      speedDuration: 6,                                     // seconds
+      tripleDuration: 8,                                    // seconds
     };
+
+    // Power-up types: pickup effect + how they look. `weight` controls rarity.
+    const POWERUPS = {
+      ammo:   { color: '#818cf8', label: 'A', weight: 3, apply: () => { game.ammo += 5; } },
+      time:   { color: '#2dd4bf', label: 'T', weight: 2, apply: () => { game.timeLeft += 15; } },
+      speed:  { color: '#facc15', label: 'S', weight: 2, apply: () => { player.speedTimer = CONFIG.speedDuration; } },
+      triple: { color: '#fb923c', label: '✦', weight: 2, apply: () => { player.tripleTimer = CONFIG.tripleDuration; } },
+      life:   { color: '#f43f5e', label: '♥', weight: 1, apply: () => { game.lives += 1; } },
+    };
+    const POWERUP_BAG = Object.entries(POWERUPS)
+      .flatMap(([type, def]) => Array(def.weight).fill(type)); // weighted pick list
 
     // ---------- State ----------
     const canvas = document.getElementById('game');
@@ -176,7 +191,7 @@
     let grid, cols, rows;
     let start = { x: 1, y: 1 };
     let exit = { x: 1, y: 1 };
-    let player, enemies, bullets;
+    let player, enemies, bullets, powerups;
 
     const game = {
       level: 1,
@@ -299,12 +314,15 @@
         radius: 11,
         speed: CONFIG.playerSpeed,
         invuln: 0,
+        speedTimer: 0,
+        tripleTimer: 0,
       };
 
       game.ammo = CONFIG.ammo(level);
       game.timeLeft = CONFIG.timer(level);
 
       spawnEnemies(CONFIG.enemyCount(level), CONFIG.enemySpeed(level));
+      spawnPowerups(CONFIG.powerupCount);
       bullets = [];
 
       game.state = 'playing';
@@ -352,6 +370,31 @@
       }
     }
 
+    function spawnPowerups(count) {
+      powerups = [];
+      // eligible floor tiles: not the start tile, not the exit, not on an enemy
+      const occupied = new Set(enemies.map(e => {
+        const t = tileAtPx(e.x, e.y); return idx(t.x, t.y);
+      }));
+      const candidates = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const i = idx(x, y);
+          if (grid[i] === T.FLOOR && !(x === start.x && y === start.y) &&
+              !(x === exit.x && y === exit.y) && !occupied.has(i)) {
+            candidates.push({ x, y });
+          }
+        }
+      }
+      for (let n = 0; n < count && candidates.length; n++) {
+        const ci = (Math.random() * candidates.length) | 0;
+        const tile = candidates.splice(ci, 1)[0]; // unique tiles, no overlap
+        const type = POWERUP_BAG[(Math.random() * POWERUP_BAG.length) | 0];
+        const p = tileCenter(tile);
+        powerups.push({ x: p.x, y: p.y, type, radius: 9, alive: true });
+      }
+    }
+
     // ---------- Input ----------
     const ARROWS = {
       ArrowUp: { dx: 0, dy: -1 }, ArrowDown: { dx: 0, dy: 1 },
@@ -372,12 +415,18 @@
     function shoot() {
       if (game.ammo <= 0) return;
       game.ammo--;
-      bullets.push({
-        x: player.x, y: player.y,
-        vx: player.facing.dx * CONFIG.bulletSpeed,
-        vy: player.facing.dy * CONFIG.bulletSpeed,
-        radius: 4, alive: true,
-      });
+      // Base angle from facing; triple-shot fires a 3-way spread for one ammo.
+      const base = Math.atan2(player.facing.dy, player.facing.dx);
+      const angles = player.tripleTimer > 0 ? [-0.26, 0, 0.26] : [0];
+      for (const off of angles) {
+        const a = base + off;
+        bullets.push({
+          x: player.x, y: player.y,
+          vx: Math.cos(a) * CONFIG.bulletSpeed,
+          vy: Math.sin(a) * CONFIG.bulletSpeed,
+          radius: 4, alive: true,
+        });
+      }
       updateHud();
     }
 
@@ -425,8 +474,11 @@
     function update(dt) {
       movePlayer(dt);
       if (player.invuln > 0) player.invuln -= dt;
+      if (player.speedTimer > 0) player.speedTimer -= dt;
+      if (player.tripleTimer > 0) player.tripleTimer -= dt;
       updateBullets(dt);
       updateEnemies(dt);
+      collectPowerups();
       handlePlayerEnemy();
       checkExit();
 
@@ -444,7 +496,8 @@
 
       if (dx !== 0 || dy !== 0) {
         const len = Math.hypot(dx, dy);
-        const step = player.speed * dt;
+        const speed = player.speed * (player.speedTimer > 0 ? CONFIG.speedBoost : 1);
+        const step = speed * dt;
         moveActor(player, (dx / len) * step, (dy / len) * step);
         // facing = dominant cardinal of current input
         if (Math.abs(dx) >= Math.abs(dy)) player.facing = { dx: Math.sign(dx), dy: 0 };
@@ -510,6 +563,17 @@
       for (const e of enemies) {
         if (e.alive && circleHit(player, e)) { loseLife('Caught by an enemy!'); return; }
       }
+    }
+
+    function collectPowerups() {
+      for (const p of powerups) {
+        if (p.alive && circleHit(player, p)) {
+          p.alive = false;
+          POWERUPS[p.type].apply();
+          updateHud();
+        }
+      }
+      powerups = powerups.filter(p => p.alive);
     }
 
     function checkExit() {
@@ -623,6 +687,26 @@
       ctx.textBaseline = 'middle';
       ctx.fillText('▶', ec.x - ox, ec.y - oy + 1);
 
+      // power-ups (pulsing coloured discs with a letter)
+      const pulse = 1 + 0.12 * Math.sin(performance.now() / 200);
+      for (const p of powerups) {
+        const def = POWERUPS[p.type];
+        const cx = p.x - ox, cy = p.y - oy;
+        ctx.save();
+        ctx.shadowColor = def.color;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = def.color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, p.radius * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 11px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(def.label, cx, cy + 1);
+      }
+
       // bullets
       ctx.fillStyle = COLORS.bullet;
       for (const b of bullets) {
@@ -641,9 +725,24 @@
 
       // player (blink while invulnerable)
       if (!(player.invuln > 0 && Math.floor(player.invuln * 12) % 2)) {
+        const pcx = player.x - ox, pcy = player.y - oy;
+        // active-buff rings (speed = amber, triple-shot = orange)
+        ctx.lineWidth = 2;
+        if (player.speedTimer > 0) {
+          ctx.strokeStyle = POWERUPS.speed.color;
+          ctx.beginPath();
+          ctx.arc(pcx, pcy, player.radius + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        if (player.tripleTimer > 0) {
+          ctx.strokeStyle = POWERUPS.triple.color;
+          ctx.beginPath();
+          ctx.arc(pcx, pcy, player.radius + 7, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.fillStyle = COLORS.player;
         ctx.beginPath();
-        ctx.arc(player.x - ox, player.y - oy, player.radius, 0, Math.PI * 2);
+        ctx.arc(pcx, pcy, player.radius, 0, Math.PI * 2);
         ctx.fill();
         // gun barrel showing facing
         ctx.strokeStyle = COLORS.player;
@@ -677,7 +776,7 @@
 
     showOverlay(
       'Maze Shooter',
-      'Find the green exit. Arrow keys move, spacebar shoots. Blast enemies and cracked walls. 3 lives, 10 levels — good luck.',
+      'Find the green exit. Arrow keys move, spacebar shoots. Blast enemies and cracked walls, and grab power-ups: A ammo, T time, S speed, ✦ triple-shot, ♥ extra life. 3 lives, 10 levels — good luck.',
       'Start', startGame
     );
     requestAnimationFrame(loop);
