@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic-Tac-Toe</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --board: #1e293b;
+      --cell: #334155;
+      --cell-hover: #475569;
+      --x: #38bdf8;
+      --o: #fb7185;
+      --text: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1rem;
+    }
+
+    h1 { margin: 0; font-weight: 700; letter-spacing: 0.05em; }
+
+    #status {
+      font-size: 1.25rem;
+      min-height: 1.5em;
+      font-weight: 600;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: var(--board);
+      padding: 8px;
+      border-radius: 12px;
+    }
+
+    .cell {
+      width: 96px;
+      height: 96px;
+      background: var(--cell);
+      border: none;
+      border-radius: 8px;
+      font-size: 3rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.05s;
+      color: var(--text);
+    }
+
+    .cell:hover:not(:disabled) { background: var(--cell-hover); }
+    .cell:active:not(:disabled) { transform: scale(0.95); }
+    .cell.x { color: var(--x); }
+    .cell.o { color: var(--o); }
+    .cell.win { background: #15803d; }
+
+    button#reset {
+      padding: 0.6rem 1.4rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background: var(--x);
+      color: var(--bg);
+      cursor: pointer;
+    }
+    button#reset:hover { filter: brightness(1.1); }
+
+    @media (max-width: 360px) {
+      .cell { width: 72px; height: 72px; font-size: 2.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <div id="status">Player X's turn</div>
+  <div id="board"></div>
+  <button id="reset">New Game</button>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const resetBtn = document.getElementById('reset');
+
+    const WINS = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6]             // diagonals
+    ];
+
+    let board, currentPlayer, gameOver;
+
+    function init() {
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      gameOver = false;
+      statusEl.textContent = "Player X's turn";
+      boardEl.innerHTML = '';
+      board.forEach((_, i) => {
+        const cell = document.createElement('button');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.addEventListener('click', handleMove);
+        boardEl.appendChild(cell);
+      });
+    }
+
+    function handleMove(e) {
+      const i = +e.currentTarget.dataset.index;
+      if (gameOver || board[i]) return;
+
+      board[i] = currentPlayer;
+      const cell = e.currentTarget;
+      cell.textContent = currentPlayer;
+      cell.classList.add(currentPlayer.toLowerCase());
+
+      const winLine = getWinningLine();
+      if (winLine) {
+        gameOver = true;
+        statusEl.textContent = `Player ${currentPlayer} wins! 🎉`;
+        winLine.forEach(idx => boardEl.children[idx].classList.add('win'));
+        return;
+      }
+
+      if (board.every(Boolean)) {
+        gameOver = true;
+        statusEl.textContent = "It's a draw!";
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      statusEl.textContent = `Player ${currentPlayer}'s turn`;
+    }
+
+    function getWinningLine() {
+      return WINS.find(line => {
+        const [a, b, c] = line;
+        return board[a] && board[a] === board[b] && board[a] === board[c];
+      });
+    }
+
+    resetBtn.addEventListener('click', init);
+    init();
+  </script>
+</body>
+</html>
