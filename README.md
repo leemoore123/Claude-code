@@ -43,13 +43,15 @@ pnpm install
 # Web (runs standalone on seed/mock data — no backend needed)
 pnpm dev:web        # http://localhost:5173
 
-# API (needs DATABASE_URL etc. — copy .env.example → .env)
-pnpm db:generate
-pnpm dev:api        # http://localhost:3001/health
+# Database — one-command Supabase bring-up (migrate → RLS → buckets → seed)
+cp .env.example .env   # set DATABASE_URL / DIRECT_URL
+pnpm supabase:setup    # see docs/supabase-setup.md
 
-# Seed the database with QST + Fincantieri demo data
-pnpm db:seed
+# API (needs DATABASE_URL etc.)
+pnpm dev:api           # http://localhost:3001/health
 ```
+
+See **`docs/supabase-setup.md`** for hosted vs. local-stack options.
 
 The web app is intentionally runnable without the backend during Phase 0/1 so the
 UI can be reviewed immediately; data calls are swapped to the API in Phase 1+.
