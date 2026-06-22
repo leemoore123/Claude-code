@@ -48,8 +48,9 @@ export DIRECT_URL="${DIRECT_URL:-$DATABASE_URL}"
 # psql connection target (migrations use Prisma; raw SQL uses psql)
 PSQL=(psql "$DATABASE_URL" -v ON_ERROR_STOP=1)
 
-echo "▸ 1/5  Generating Prisma client…"
+echo "▸ 1/5  Generating Prisma client + building shared package…"
 pnpm --filter @fsm/db generate >/dev/null
+pnpm --filter @fsm/shared build >/dev/null
 
 echo "▸ 2/5  Applying database migrations…"
 pnpm --filter @fsm/db migrate:deploy

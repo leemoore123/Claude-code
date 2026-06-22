@@ -22,16 +22,28 @@ infra/     deploy config (later phases)
 docs/      architecture notes
 ```
 
-## Status — Phase 0 / 1 (foundation)
+## Status
 
-- ✅ Monorepo + design system reproducing the portal look
-- ✅ Full Prisma data model (`packages/db/prisma/schema.prisma`)
-- ✅ Data-driven PPM/service form definitions (`packages/shared/src/form-templates.ts`)
-  rendered by a working form renderer in the web app
-- ✅ Web views: Dashboard, Clients & Contracts, Sites & Assets (folder browser),
+**Phase 0 / 1 — foundation** ✅
+- Monorepo + design system reproducing the portal look
+- Full Prisma data model (`packages/db/prisma/schema.prisma`) + Supabase setup script
+- Data-driven PPM/service form definitions rendered by a working form renderer
+- Web views: Dashboard, Clients & Contracts, Sites & Assets (folder browser),
   Schedule & Dispatch, PPM & Service Forms, Contacts, Zoho Integration
-- ✅ NestJS skeleton with PPM materializer + region-aware ZohoClient stubs
-- ⏳ Live persistence, scheduling materialization, PDF/e-sign, Zoho sync — Phases 2–5
+
+**Phase 2 — scheduling & dispatch** ✅
+- Prisma-backed REST API: `/clients`, `/sites`, `/engineers`, `/contacts`, `/jobs`
+- **PPM materializer** (`POST /scheduling/materialize` + nightly cron) — turns
+  6M/1Y/3Y frequency rules into jobs inside a 60-day lead window, idempotent on
+  `(sourcePpmRuleId, dueCycleDate)`; completing a PPM stamps the rule so the next
+  cycle re-materialises
+- **Dispatch state machine** — guarded `PATCH /jobs/:id/status` transitions +
+  engineer assignment endpoints
+- Web Schedule board wired to the live API (TanStack Query) with status-advance
+  controls, a "Run materializer" action, and transparent fallback to seed data
+  when the API is offline
+
+**Phases 3–5 — forms persistence, Zoho sync, billing/e-sign** ⏳
 
 See the full plan in `docs/` and the approved implementation plan.
 
