@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QEY FSM — Field Service Management (Demo)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2e;--navy2:#152540;--navy3:#1e3356;
+  --blue:#185FA5;--blue-l:#E6F1FB;--blue-m:#378ADD;--blue-d:#0C447C;
+  --accent:#0ea5e9;--teal:#0d9488;
+  --text:#0d1b2e;--muted:#64748b;--border:#e2e8f0;
+  --bg:#f1f5f9;--white:#fff;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#7c3aed;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--navy);color:#fff;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:200;border-bottom:2px solid var(--blue)}
+.topbar-brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:28px;height:28px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;letter-spacing:.05em}
+.brand-name{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.07em}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.5);margin-left:4px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-date{font-size:11px;color:rgba(255,255,255,.45);font-family:var(--mono)}
+.user-chip{display:flex;align-items:center;gap:7px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.15)}
+.user-avatar{width:22px;height:22px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600}
+.user-name{font-size:12px;color:rgba(255,255,255,.85);font-weight:500}
+.user-role-tag{font-size:9px;padding:2px 6px;border-radius:10px;background:#042C53;color:#B5D4F4;font-weight:600}
+
+.shell{display:flex;height:calc(100vh - 54px)}
+
+/* SIDEBAR */
+.sidebar{width:225px;flex-shrink:0;background:var(--navy2);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06);overflow-y:auto}
+.sidebar-section{padding:16px 14px 4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.3)}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.55);border-left:2px solid transparent;transition:all .15s}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
+.nav-item.active{color:#fff;border-left-color:var(--accent);background:rgba(14,165,233,.12)}
+.nav-item i{font-size:15px;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(24,95,165,.3);color:#60a5fa}
+.sidebar-foot{margin-top:auto;padding:14px;font-size:10px;color:rgba(255,255,255,.3);line-height:1.6}
+
+.main{flex:1;overflow-y:auto;padding:24px}
+.view{display:none}.view.active{display:block}
+
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.page-title{font-size:20px;font-weight:600}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+.btn{font-family:var(--sans);font-size:12px;font-weight:500;padding:7px 14px;border-radius:6px;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-d)}
+.btn-outline{background:#fff;color:var(--blue);border:1px solid var(--blue)}.btn-outline:hover{background:var(--blue-l)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card.b{border-top:3px solid var(--blue)}.stat-card.g{border-top:3px solid var(--green)}
+.stat-card.a{border-top:3px solid var(--amber)}.stat-card.p{border-top:3px solid var(--purple)}
+.stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.stat-value{font-size:26px;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-meta{font-size:11px;color:var(--muted);margin-top:4px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.panel-head{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+.tbl th{background:#f8fafc;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:9px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl td{padding:11px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafbfc}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:all .18s}
+.card.click{cursor:pointer}
+.card.click:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(24,95,165,.12);transform:translateY(-1px)}
+.card-head{background:var(--navy2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;color:#fff}
+.card-name{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:.03em}
+.card-sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px}
+.card-body{padding:14px 16px}
+.card-foot{padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fafbfc;font-size:11px;color:var(--muted)}
+
+.pill{display:inline-flex;align-items:center;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.badge{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.bg-slate{background:#f1f5f9;color:#475569}.bg-blue{background:#dbeafe;color:#1d4ed8}
+.bg-amber{background:#fef3c7;color:#92400e}.bg-green{background:#d1fae5;color:#065f46}
+.bg-indigo{background:#e0e7ff;color:#4338ca}.bg-teal{background:#ccfbf1;color:#0f766e}
+.bg-sky{background:#e0f2fe;color:#0369a1}.bg-violet{background:#ede9fe;color:#6d28d9}
+.bg-rose{background:#ffe4e6;color:#9f1239}
+
+.progress{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:4px}
+.progress > div{height:100%;border-radius:99px;background:var(--blue)}
+
+/* folder browser */
+.crumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:16px}
+.crumb a{color:var(--blue);cursor:pointer}
+.folder-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s;margin-bottom:4px}
+.folder-item:hover{border-color:var(--blue);background:var(--blue-l)}
+.folder-item i{font-size:20px;color:var(--blue)}
+
+/* schedule */
+.sched{overflow-x:auto;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg)}
+.sched table{min-width:880px}
+.sched th{background:#f8fafc;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px;text-align:left;border-bottom:1px solid var(--border)}
+.sched td{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:6px;vertical-align:top;min-width:130px}
+.sched td:first-child{border-left:none;font-size:12px;font-weight:600;min-width:150px}
+.chip{border:1px solid var(--border);border-radius:6px;padding:6px;margin-bottom:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.chip-title{font-size:11px;font-weight:500;line-height:1.25;margin-bottom:2px}
+.chip-sub{font-size:10px;color:var(--muted);margin-bottom:4px}
+.chip-row{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.chip select{font-size:9px;border:1px solid var(--border);border-radius:4px;padding:1px;color:var(--muted);max-width:84px}
+
+/* forms */
+.form-wrap{max-width:760px}
+.fsection{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px}
+.fsection-head{background:#f8fafc;border-bottom:1px solid var(--border);padding:10px 16px;font-size:13px;font-weight:600}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}
+.field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;font-family:var(--sans);font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:5px;color:var(--text)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.08)}
+.field.col2{grid-column:span 2}
+.field .unit{display:flex;align-items:center;gap:8px}
+.field .warn{color:var(--red);font-size:10px;font-weight:500;margin-top:3px}
+.req{color:var(--red)}
+.banner{border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:14px}
+.banner.err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+.banner.ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+.banner.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e;margin-top:6px}
+canvas.sig{width:100%;height:90px;border:1px solid var(--border);border-radius:6px;background:#fff;touch-action:none;cursor:crosshair}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(13,27,46,.6);z-index:500;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);width:480px;max-width:calc(100vw - 32px);overflow:hidden;max-height:86vh;display:flex;flex-direction:column}
+.modal-head{background:var(--navy2);padding:15px 20px;display:flex;align-items:center;justify-content:space-between;color:#fff;font-size:14px;font-weight:600}
+.modal-head i{cursor:pointer;color:rgba(255,255,255,.7)}
+.modal-body{padding:12px;overflow-y:auto}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;transform:translateY(70px);opacity:0;transition:all .25s;z-index:999;border-left:3px solid var(--green)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-left-color:var(--red)}
+.live-badge{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:600;background:#d1fae5;color:#065f46}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-mark">FSM</div>
+    <div><span class="brand-name">QEY TECHNICAL</span><span class="brand-sub">/ Field Service Management</span></div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-date" id="top-date"></span>
+    <div class="user-chip"><div class="user-avatar">LM</div><span class="user-name">Lee Moore</span><span class="user-role-tag">Admin</span></div>
+    <i class="ti ti-bell" style="font-size:16px;color:rgba(255,255,255,.5)"></i>
+  </div>
+</div>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="sidebar-section">Operations</div>
+    <div class="nav-item active" data-view="dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+    <div class="nav-item" data-view="clients"><i class="ti ti-building-community"></i> Clients &amp; Contracts</div>
+    <div class="nav-item" data-view="sites"><i class="ti ti-server-2"></i> Sites &amp; Assets</div>
+    <div class="nav-item" data-view="schedule"><i class="ti ti-calendar-time"></i> Schedule &amp; Dispatch <span class="nav-badge" id="nav-jobs">0</span></div>
+    <div class="nav-item" data-view="forms"><i class="ti ti-file-text"></i> PPM &amp; Service Forms</div>
+    <div class="nav-item" data-view="contacts"><i class="ti ti-address-book"></i> Contacts</div>
+    <div class="nav-item" data-view="integrations"><i class="ti ti-plug-connected"></i> Zoho Integration</div>
+    <div class="sidebar-foot">Self-contained demo · seed data<br>QST HVAC · Fincantieri Qatar</div>
+  </div>
+
+  <div class="main">
+    <div class="view active" id="view-dashboard"></div>
+    <div class="view" id="view-clients"></div>
+    <div class="view" id="view-sites"></div>
+    <div class="view" id="view-schedule"></div>
+    <div class="view" id="view-forms"></div>
+    <div class="view" id="view-contacts"></div>
+    <div class="view" id="view-integrations"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal"><div class="modal-head" id="modal-head"></div><div class="modal-body" id="modal-body"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────────────────── DATA ───────────────────── */
+const ENGINEERS=[
+ {id:'e1',name:'Lee Moore',role:'Lead Engineer'},
+ {id:'e2',name:'Muhammad Shakeel',role:'Site Technician'},
+ {id:'e3',name:'Evgenii',role:'Technical Director'},
+ {id:'e4',name:'Andrei',role:'Senior Engineer'},
+ {id:'e5',name:'Jon',role:'Site Engineer'},
+];
+const CLIENTS=[
+ {id:'c-qst',name:'QST HVAC',sector:'Data Centres',region:'Riyadh, KSA',crm:'…000123'},
+ {id:'c-fin',name:'Fincantieri Qatar',sector:'Naval / Marine',region:'Doha, Qatar',crm:'…000456'},
+];
+const CONTRACTS=[
+ {id:'ct1',clientId:'c-qst',name:'O&M — DMMA / DMMB Chiller Plant',start:'2024-01-01',end:'2026-12-31'},
+ {id:'ct2',clientId:'c-fin',name:'Fleet PPM — 6 Vessels (OPV/CRV)',start:'2024-06-01',end:'2027-05-31'},
+];
+const SITES=[
+ {id:'s-dc1',clientId:'c-qst',type:'data_centre',name:'DC1 — DMMA',code:'DMMA',region:'Riyadh, KSA',assets:9},
+ {id:'s-dc2',clientId:'c-qst',type:'data_centre',name:'DC2 — DMMB',code:'DMMB',region:'Riyadh, KSA',assets:7},
+ {id:'s-f101',clientId:'c-fin',type:'vessel',name:'Al Zubarah',code:'F101',hull:'H/N 6291',region:'Doha',assets:2},
+ {id:'s-f102',clientId:'c-fin',type:'vessel',name:'Damsah',code:'F102',hull:'H/N 6292',region:'Doha',assets:2},
+ {id:'s-q61',clientId:'c-fin',type:'vessel',name:'Musherib',code:'Q61',hull:'H/N 6276',region:'Doha',assets:4},
+ {id:'s-q62',clientId:'c-fin',type:'vessel',name:'Sheraouh',code:'Q62',hull:'H/N 6297',region:'Doha',assets:4},
+];
+const ASSETS=[
+ {siteId:'s-dc1',type:'chiller',tag:'MEP1-CH1',mfr:'Climaveneta FR2-G05-Z'},
+ {siteId:'s-dc1',type:'fan_wall',tag:'DH1-09',mfr:'—'},
+ {siteId:'s-dc1',type:'crac',tag:'IF1-02',mfr:'—'},
+ {siteId:'s-dc2',type:'chiller',tag:'DMMB-CH1',mfr:'Climaveneta'},
+ {siteId:'s-dc2',type:'fan_wall',tag:'DMMB-FW3',mfr:'—'},
+ {siteId:'s-f101',type:'chiller',tag:'F101-CH1',mfr:'—'},
+ {siteId:'s-f101',type:'chiller',tag:'F101-CH2',mfr:'—'},
+ {siteId:'s-q61',type:'chiller',tag:'Q61-CH1',mfr:'—'},
+];
+const CONTACTS=[
+ {clientId:'c-qst',name:'Naga',title:'Facilities Manager',fn:'Client rep, works approval, permit to work',phone:'+966 5X XXX XXXX',email:'naga@qst.com'},
+ {clientId:'c-qst',name:'Abubakr',title:'Technical Lead',fn:'Technical oversight, RCA review, sign-off',phone:'+966 5X XXX XXXX',email:'abubakr@qst.com'},
+ {clientId:'c-fin',name:'Francesco Bordone',title:'ISS Manager',fn:'POC & supervisor — Al Zubarah',phone:'+974 6629 7037',email:'Francesco.Bordone@doha.fincantieri.com'},
+ {clientId:'c-fin',name:'Massimiliano Deidda',title:'Lead Project Engineer',fn:'POC for QENF & supplier, planning',phone:'+974 3991 4967',email:'Massimiliano.Deidda@doha.fincantieri.com'},
+ {clientId:'c-fin',name:'Marianna Penna',title:'ISS Manager',fn:'POC & supervisor — Musherib / Sheraouh',phone:'+974 6684 0747',email:'Marianna.Penna@doha.fincantieri.com'},
+];
+const SITE_FOLDERS=['PPM Reports','Service Reports','Wiring Diagrams','Manuals & Instructions','Thermography','RAMS / Method Statements','Calibration Reports','Commissioning Docs','Correspondence'];
+
+function isoOffset(d){const x=new Date();x.setHours(0,0,0,0);x.setDate(x.getDate()+d);return x.toISOString().slice(0,10);}
+function monday(){const s=new Date();s.setHours(0,0,0,0);s.setDate(s.getDate()-((s.getDay()+6)%7));return s;}
+let JOBS=[
+ {id:'j1',clientId:'c-qst',siteId:'s-dc1',type:'ppm',scope:'six_month',title:'Chiller 6M PPM — MEP1-CH1',status:'scheduled',eng:'e1',start:wd(0),asset:'MEP1-CH1'},
+ {id:'j2',clientId:'c-qst',siteId:'s-dc1',type:'ppm',scope:'six_month',title:'CRAC PPM — IF1-02',status:'dispatched',eng:'e2',start:wd(0),asset:'IF1-02'},
+ {id:'j3',clientId:'c-qst',siteId:'s-dc2',type:'corrective',title:'Expansion PCB replacement',status:'in_progress',eng:'e3',start:wd(1),asset:'DMMB-CH1'},
+ {id:'j4',clientId:'c-fin',siteId:'s-f101',type:'ppm',scope:'one_year',title:'Chiller Annual PPM — F101-CH1',status:'scheduled',eng:'e1',start:wd(2),asset:'F101-CH1'},
+ {id:'j5',clientId:'c-fin',siteId:'s-q61',type:'ppm',scope:'six_month',title:'Chiller 6M PPM — Q61-CH1',status:'scheduled',eng:'e4',start:wd(3),asset:'Q61-CH1'},
+ {id:'j6',clientId:'c-qst',siteId:'s-dc1',type:'ppm',scope:'six_month',title:'Fan Wall PPM — DH1-09',status:'signed_off',eng:'e2',start:wd(-2),asset:'DH1-09'},
+ {id:'j7',clientId:'c-fin',siteId:'s-q62',type:'survey',title:'Condition survey — Sheraouh chillers',status:'scheduled',eng:'e5',start:wd(4)},
+];
+function wd(i){const m=monday();m.setDate(m.getDate()+i);return m.toISOString().slice(0,10);}
+
+/* state machine (mirror of API) */
+const TRANSITIONS={scheduled:['dispatched','cancelled','on_hold'],dispatched:['en_route','on_site','cancelled','on_hold'],en_route:['on_site','cancelled','on_hold'],on_site:['in_progress','cancelled','on_hold'],in_progress:['completed','on_hold','cancelled'],completed:['signed_off','in_progress'],signed_off:['invoiced'],invoiced:[],cancelled:['scheduled'],on_hold:['scheduled','dispatched','en_route','on_site','in_progress']};
+const STATUS_META={scheduled:['Scheduled','bg-slate'],dispatched:['Dispatched','bg-blue'],en_route:['En route','bg-blue'],on_site:['On site','bg-indigo'],in_progress:['In progress','bg-amber'],completed:['Completed','bg-green'],signed_off:['Signed off','bg-green'],invoiced:['Invoiced','bg-teal'],cancelled:['Cancelled','bg-rose'],on_hold:['On hold','bg-slate']};
+const ASSET_BADGE={chiller:'bg-sky',crac:'bg-violet',fan_wall:'bg-amber',ahu:'bg-teal',pump:'bg-slate',other:'bg-slate'};
+const FREQ_LABEL={six_month:'6 Monthly',one_year:'Annual',three_year:'3 Yearly',monthly:'Monthly',quarterly:'Quarterly'};
+
+/* ───────────────────── FORM TEMPLATES (data-driven) ───────────────────── */
+const jobMeta={title:'Job & Site Details',fields:[
+ {key:'report_no',label:'Report No.',type:'text',required:true},
+ {key:'site',label:'Site / Vessel',type:'text',required:true},
+ {key:'asset_tag',label:'Asset Tag / Ref',type:'text',required:true},
+ {key:'visit_date',label:'Visit Date',type:'date',required:true},
+ {key:'engineer',label:'Attending Engineer',type:'text',required:true},
+]};
+const observations={title:'Observations & Outcome',fields:[
+ {key:'defects',label:'Defects / Faults Found',type:'textarea'},
+ {key:'actions',label:'Actions Taken',type:'textarea'},
+ {key:'recommendations',label:'Recommendations',type:'textarea'},
+ {key:'parts_used',label:'Parts Used',type:'textarea'},
+ {key:'photos',label:'Photographs',type:'attachment'},
+ {key:'overall_status',label:'Overall Asset Status',type:'select',required:true,options:['Operational','Operational with defects','Failed / Off-line']},
+]};
+const signoff={title:'Sign-off',fields:[
+ {key:'engineer_sig',label:'Engineer Signature',type:'signature',required:true},
+ {key:'client_name',label:'Client Representative',type:'text'},
+ {key:'client_sig',label:'Client Signature',type:'signature'},
+]};
+const TEMPLATES=[
+ {key:'chiller_ppm_6m',title:'Chiller PPM — 6 Monthly',assetType:'chiller',jobType:'ppm',scope:'six_month',sections:[jobMeta,
+  {title:'Electrical',fields:[
+   {key:'v_l1',label:'Supply Voltage L1-L2',type:'reading',unit:'V',min:380,max:420},
+   {key:'v_l2',label:'Supply Voltage L2-L3',type:'reading',unit:'V',min:380,max:420},
+   {key:'v_l3',label:'Supply Voltage L3-L1',type:'reading',unit:'V',min:380,max:420},
+   {key:'c1',label:'Compressor 1 Running Current',type:'reading',unit:'A'},
+   {key:'c2',label:'Compressor 2 Running Current',type:'reading',unit:'A'},
+   {key:'terminals',label:'Terminals Tightened',type:'select',options:['OK','Adjusted','N/A']},
+  ]},
+  {title:'Refrigeration Circuit',fields:[
+   {key:'suction',label:'Suction Pressure',type:'reading',unit:'bar'},
+   {key:'discharge',label:'Discharge Pressure',type:'reading',unit:'bar'},
+   {key:'superheat',label:'Superheat',type:'reading',unit:'K'},
+   {key:'leak',label:'Refrigerant Leak Check',type:'select',required:true,options:['Pass','Leak found','N/A']},
+   {key:'sight',label:'Sight Glass',type:'select',options:['Clear','Bubbles','Moisture']},
+  ]},
+  {title:'Water / Condenser Side',fields:[
+   {key:'evap_in',label:'Evaporator Water In',type:'reading',unit:'°C'},
+   {key:'evap_out',label:'Evaporator Water Out',type:'reading',unit:'°C'},
+   {key:'flow',label:'Flow Switch Operation',type:'select',options:['OK','Fault']},
+   {key:'strainers',label:'Strainers Cleaned',type:'checkbox'},
+  ]},
+  observations,signoff]},
+ {key:'chiller_ppm_1y',title:'Chiller PPM — Annual',assetType:'chiller',jobType:'ppm',scope:'one_year',sections:[jobMeta,
+  {title:'Annual Tasks',fields:[
+   {key:'oil',label:'Compressor Oil Analysis',type:'select',options:['Sampled','Changed','N/A']},
+   {key:'oil_acid',label:'Oil Acidity Test',type:'select',options:['Pass','Fail','N/A']},
+   {key:'cond_clean',label:'Condenser Coil Cleaned',type:'checkbox'},
+   {key:'megger',label:'Motor Insulation (Megger)',type:'reading',unit:'MΩ'},
+   {key:'thermo',label:'Electrical Thermography Done',type:'checkbox'},
+  ]},observations,signoff]},
+ {key:'chiller_ppm_3y',title:'Chiller PPM — 3 Yearly (Major)',assetType:'chiller',jobType:'ppm',scope:'three_year',sections:[jobMeta,
+  {title:'3-Yearly Major Tasks',fields:[
+   {key:'eev',label:'EXV / EEV Serviced',type:'checkbox'},
+   {key:'sensors',label:'Sensors Calibrated',type:'checkbox'},
+   {key:'contactor',label:'Contactors Replaced',type:'select',options:['Replaced','Not required']},
+   {key:'recharge',label:'Refrigerant Recovered & Recharged',type:'select',options:['Done','N/A']},
+   {key:'backup',label:'Controller Config Backed Up',type:'checkbox'},
+  ]},observations,signoff]},
+ {key:'crac_ppm',title:'CRAC / CRAH PPM',assetType:'crac',jobType:'ppm',scope:'six_month',sections:[jobMeta,
+  {title:'Air Side',fields:[
+   {key:'ret',label:'Return Air Temp',type:'reading',unit:'°C'},
+   {key:'sup',label:'Supply Air Temp',type:'reading',unit:'°C'},
+   {key:'rh',label:'Return Humidity',type:'reading',unit:'%RH'},
+   {key:'filters',label:'Filters',type:'select',required:true,options:['Clean','Cleaned','Replaced']},
+   {key:'dp',label:'Filter Differential Pressure',type:'reading',unit:'Pa'},
+  ]},
+  {title:'Cooling & Humidification',fields:[
+   {key:'valve',label:'Chilled Water Valve',type:'select',options:['OK','Fault','N/A']},
+   {key:'humid',label:'Humidifier',type:'select',options:['OK','Cleaned','Fault','N/A']},
+   {key:'cond',label:'Condensate Drain Clear',type:'checkbox'},
+  ]},observations,signoff]},
+ {key:'fan_wall_ppm',title:'Fan Wall PPM',assetType:'fan_wall',jobType:'ppm',scope:'six_month',sections:[jobMeta,
+  {title:'Fan Array',fields:[
+   {key:'total',label:'Total Fans in Array',type:'number'},
+   {key:'running',label:'Fans Running OK',type:'number'},
+   {key:'faulty',label:'Faulty Fans (refs)',type:'textarea'},
+   {key:'guards',label:'Guards / Mountings Secure',type:'checkbox'},
+  ]},
+  {title:'Electrical & Airflow',fields:[
+   {key:'v',label:'Supply Voltage',type:'reading',unit:'V'},
+   {key:'amps',label:'Total Array Current',type:'reading',unit:'A'},
+   {key:'vfd',label:'VFD / EC Drive Status',type:'select',options:['OK','Fault']},
+   {key:'dpw',label:'Differential Pressure Across Wall',type:'reading',unit:'Pa'},
+   {key:'redundancy',label:'N+1 Redundancy Verified',type:'checkbox'},
+  ]},observations,signoff]},
+ {key:'service',title:'Service / Corrective Report',jobType:'corrective',sections:[
+  {title:'Call Details',fields:[
+   {key:'report_no',label:'Report No.',type:'text',required:true},
+   {key:'site',label:'Site / Vessel',type:'text',required:true},
+   {key:'asset_tag',label:'Asset Tag / Ref',type:'text'},
+   {key:'visit_date',label:'Attendance Date',type:'date',required:true},
+   {key:'engineer',label:'Attending Engineer',type:'text',required:true},
+   {key:'call_type',label:'Call Type',type:'select',required:true,options:['Breakdown','Reactive','Warranty','Remedial','Investigation']},
+   {key:'reported',label:'Reported Fault',type:'textarea',required:true},
+  ]},
+  {title:'Diagnosis & Work',fields:[
+   {key:'findings',label:'Findings on Site',type:'textarea',required:true},
+   {key:'root_cause',label:'Root Cause',type:'textarea'},
+   {key:'work',label:'Work Carried Out',type:'textarea',required:true},
+   {key:'parts',label:'Parts Used',type:'textarea'},
+   {key:'hours',label:'Labour Hours',type:'reading',unit:'h'},
+   {key:'outcome',label:'Outcome',type:'select',required:true,options:['Rectified','Temporary fix','Parts required','Further visit needed']},
+  ]},signoff]},
+];
+
+/* ───────────────────── HELPERS ───────────────────── */
+const $=s=>document.querySelector(s);
+const clientName=id=>(CLIENTS.find(c=>c.id===id)||{}).name||'—';
+const siteName=id=>(SITES.find(s=>s.id===id)||{}).name||'—';
+const engName=id=>(ENGINEERS.find(e=>e.id===id)||{}).name||'Unassigned';
+function statusPill(s){const m=STATUS_META[s]||[s,'bg-slate'];return `<span class="pill ${m[1]}">${m[0]}</span>`;}
+function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.classList.remove('show'),2600);}
+$('#top-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+
+/* ───────────────────── ROUTER ───────────────────── */
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>show(n.dataset.view)));
+function show(v){
+ document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+ document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.view===v));
+ $('#view-'+v).classList.add('active');
+ ({dashboard:renderDashboard,clients:renderClients,sites:renderSites,schedule:renderSchedule,forms:renderForms,contacts:renderContacts,integrations:renderIntegrations}[v])();
+}
+
+/* ───────────────────── DASHBOARD ───────────────────── */
+function renderDashboard(){
+ const open=JOBS.filter(j=>!['completed','signed_off','invoiced','cancelled'].includes(j.status));
+ const done=JOBS.filter(j=>['completed','signed_off','invoiced'].includes(j.status));
+ const upcoming=JOBS.filter(j=>j.start>=isoOffset(0)).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,6);
+ $('#nav-jobs').textContent=JOBS.length;
+ $('#view-dashboard').innerHTML=`
+ <div class="page-header"><div><div class="page-title">Dashboard</div><div class="page-sub">Field service overview — all clients</div></div></div>
+ <div class="stat-grid">
+  <div class="stat-card b"><div class="stat-label">Active clients</div><div class="stat-value">${CLIENTS.length}</div><div class="stat-meta">QST · Fincantieri</div></div>
+  <div class="stat-card a"><div class="stat-label">Open jobs</div><div class="stat-value">${open.length}</div><div class="stat-meta">${JOBS.filter(j=>j.type==='ppm').length} PPM in plan</div></div>
+  <div class="stat-card g"><div class="stat-label">Completed</div><div class="stat-value">${done.length}</div><div class="stat-meta">incl. signed-off</div></div>
+  <div class="stat-card p"><div class="stat-label">Engineers</div><div class="stat-value">${ENGINEERS.length}</div><div class="stat-meta">available to dispatch</div></div>
+ </div>
+ <div class="grid2">
+  <div class="panel"><div class="panel-head">Upcoming jobs</div><table>${upcoming.map(j=>`
+   <tr><td style="padding:11px 14px;border-bottom:1px solid #f1f5f9"><div style="font-weight:600;font-size:13px">${j.title}</div><div style="font-size:11px;color:var(--muted)">${siteName(j.siteId)}</div></td>
+   <td style="font-size:12px;border-bottom:1px solid #f1f5f9">${engName(j.eng)}</td>
+   <td style="font-family:var(--mono);font-size:11px;color:var(--muted);border-bottom:1px solid #f1f5f9">${j.start}</td>
+   <td style="text-align:right;border-bottom:1px solid #f1f5f9;padding-right:14px">${statusPill(j.status)}</td></tr>`).join('')}</table></div>
+  <div class="panel"><div class="panel-head">PPM workload by client</div><div style="padding:16px">${CLIENTS.map(c=>{
+   const cs=JOBS.filter(j=>j.clientId===c.id&&j.type==='ppm');const d=cs.filter(j=>['completed','signed_off','invoiced'].includes(j.status)).length;const pct=cs.length?Math.round(d/cs.length*100):0;
+   return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span style="font-weight:500">${c.name}</span><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${d}/${cs.length}</span></div><div class="progress"><div style="width:${pct}%"></div></div></div>`;
+  }).join('')}<div style="font-size:11px;color:var(--muted);margin-top:8px">Sites covered: ${SITES.length}</div></div></div>
+ </div>`;
+}
+
+/* ───────────────────── CLIENTS ───────────────────── */
+function renderClients(){
+ $('#view-clients').innerHTML=`
+ <div class="page-header"><div><div class="page-title">Clients &amp; Contracts</div><div class="page-sub">Multi-client portfolio — synced with Zoho CRM</div></div></div>
+ <div class="card-grid">${CLIENTS.map(c=>{
+  const cts=CONTRACTS.filter(x=>x.clientId===c.id);const ss=SITES.filter(s=>s.clientId===c.id);
+  return `<div class="card"><div class="card-head"><div><div class="card-name">${c.name}</div><div class="card-sub">${c.sector} · ${c.region}</div></div><i class="ti ti-${c.sector.includes('Naval')?'ship':'building-factory-2'}" style="font-size:20px;color:rgba(255,255,255,.6)"></i></div>
+  <div class="card-body">${cts.map(ct=>`<div style="display:flex;gap:8px;font-size:12px;margin-bottom:8px"><i class="ti ti-circle-check" style="color:var(--green);font-size:15px"></i><div><div style="font-weight:500">${ct.name}</div><div style="font-size:11px;color:var(--muted)">${ct.start} → ${ct.end}</div></div></div>`).join('')}</div>
+  <div class="card-foot"><span>${ss.length} site${ss.length!==1?'s':''}</span><span style="font-family:var(--mono);font-size:10px">CRM: ${c.crm}</span></div></div>`;
+ }).join('')}</div>`;
+}
+
+/* ───────────────────── SITES + FOLDER BROWSER ───────────────────── */
+function renderSites(){
+ $('#view-sites').innerHTML=`
+ <div class="page-header"><div><div class="page-title">Sites &amp; Assets</div><div class="page-sub">Data centres &amp; vessels across all clients</div></div></div>
+ <div class="card-grid">${SITES.map(s=>{const as=ASSETS.filter(a=>a.siteId===s.id);
+  return `<div class="card click" onclick="openSite('${s.id}')"><div class="card-head"><div><div class="card-name">${s.name}</div><div class="card-sub">${clientName(s.clientId)} ${s.hull?'· '+s.hull:''}</div></div><i class="ti ti-${s.type==='vessel'?'ship':'server-2'}" style="font-size:18px;color:rgba(255,255,255,.6)"></i></div>
+  <div class="card-body"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px">${s.region} · ${s.code}</div><div style="display:flex;flex-wrap:wrap;gap:5px">${as.length?as.map(a=>`<span class="badge ${ASSET_BADGE[a.type]}">${a.type.replace('_',' ')}</span>`).join(''):s.assets+' assets'}</div></div>
+  <div class="card-foot"><span>${s.assets} assets</span><span style="color:var(--blue);font-weight:500">Open folder ›</span></div></div>`;
+ }).join('')}</div>`;
+}
+window.openSite=function(id){
+ const s=SITES.find(x=>x.id===id);const as=ASSETS.filter(a=>a.siteId===id);
+ $('#view-sites').innerHTML=`
+ <div class="page-header"><div><div class="page-title">${s.name} — Documents</div><div class="page-sub">${clientName(s.clientId)} · ${s.region} · ${s.code}</div></div>
+  <button class="btn btn-outline" onclick="renderSites()"><i class="ti ti-arrow-left"></i> All sites</button></div>
+ <div class="crumb"><a onclick="renderSites()">All sites</a> <span style="color:var(--border)">/</span> <span>${s.name}</span></div>
+ <div style="display:grid;grid-template-columns:1fr 280px;gap:16px">
+  <div>${SITE_FOLDERS.map(f=>`<div class="folder-item" onclick="toast('Opening “${f}” — ${1+Math.floor(Math.random()*9)} documents (demo)')"><i class="ti ti-folder"></i><div style="flex:1"><div style="font-size:13px;font-weight:500">${f}</div><div style="font-size:11px;color:var(--muted)">Folder · synced to storage</div></div><i class="ti ti-chevron-right" style="color:var(--muted)"></i></div>`).join('')}</div>
+  <div class="panel" style="height:fit-content"><div class="panel-head">Assets on site</div>${as.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid #f1f5f9"><div><div style="font-family:var(--mono);font-size:12px;font-weight:500">${a.tag}</div><div style="font-size:11px;color:var(--muted)">${a.mfr}</div></div><span class="badge ${ASSET_BADGE[a.type]}">${a.type.replace('_',' ')}</span></div>`).join('')||'<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No assets</div>'}</div>
+ </div>`;
+}
+
+/* ───────────────────── SCHEDULE ───────────────────── */
+function renderSchedule(){
+ const days=[...Array(6)].map((_,i)=>{const m=monday();m.setDate(m.getDate()+i);return {iso:m.toISOString().slice(0,10),label:m.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'})};});
+ const unassigned=JOBS.filter(j=>!j.eng);
+ $('#view-schedule').innerHTML=`
+ <div class="page-header"><div><div class="page-title">Schedule &amp; Dispatch</div><div class="page-sub">This week — engineers × days. PPM jobs auto-materialise from frequency rules.</div></div>
+  <div style="display:flex;gap:8px"><span class="live-badge"><i class="ti ti-wifi"></i> Interactive demo</span><button class="btn btn-outline" onclick="runMaterializer()"><i class="ti ti-player-play"></i> Run materializer</button></div></div>
+ <div class="sched"><table><thead><tr><th>Engineer</th>${days.map(d=>`<th>${d.label}</th>`).join('')}</tr></thead><tbody>
+ ${ENGINEERS.map(e=>`<tr><td>${e.name}<div style="font-size:10px;font-weight:400;color:var(--muted)">${e.role}</div></td>${days.map(d=>{
+   const cell=JOBS.filter(j=>j.eng===e.id&&j.start===d.iso);
+   return `<td>${cell.map(j=>jobChip(j)).join('')}</td>`;
+ }).join('')}</tr>`).join('')}
+ </tbody></table></div>
+ ${unassigned.length?`<div style="margin-top:16px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">Unassigned backlog</div><div style="display:flex;flex-wrap:wrap;gap:8px">${unassigned.map(j=>`<div style="width:210px">${jobChip(j)}</div>`).join('')}</div></div>`:''}`;
+}
+function jobChip(j){
+ const opts=TRANSITIONS[j.status]||[];
+ return `<div class="chip"><div class="chip-title">${j.title}</div><div class="chip-sub">${siteName(j.siteId)}</div>
+  <div class="chip-row">${statusPill(j.status)}${opts.length?`<select onchange="advance('${j.id}',this.value)"><option value="">→</option>${opts.map(o=>`<option value="${o}">${o.replace('_',' ')}</option>`).join('')}</select>`:''}</div></div>`;
+}
+window.advance=function(id,to){if(!to)return;const j=JOBS.find(x=>x.id===id);if(!(TRANSITIONS[j.status]||[]).includes(to)){toast('Illegal transition '+j.status+' → '+to,true);return;}j.status=to;toast(j.title.split(' — ')[0]+' → '+to.replace('_',' '));renderSchedule();}
+window.runMaterializer=function(){
+ // emulate the PPM materializer: create upcoming jobs from frequency rules that aren't already scheduled
+ const rules=[{siteId:'s-dc2',asset:'DMMB-FW3',scope:'six_month',title:'Fan Wall PPM — DMMB-FW3',clientId:'c-qst',eng:'e4'},
+              {siteId:'s-f102',asset:'F102-CH1',scope:'one_year',title:'Chiller Annual PPM — F102-CH1',clientId:'c-fin',eng:'e1'}];
+ let added=0;
+ rules.forEach(r=>{const exists=JOBS.some(j=>j.title===r.title);if(!exists){JOBS.push({id:'jm'+(JOBS.length+1),type:'ppm',status:'scheduled',start:wd(3+added),...r});added++;}});
+ toast(`Materializer: +${added} jobs (${rules.length-added} already existed, ${rules.length} rules checked)`);
+ renderSchedule();
+}
+
+/* ───────────────────── CONTACTS ───────────────────── */
+let contactTab='client';
+function renderContacts(){
+ $('#view-contacts').innerHTML=`
+ <div class="page-header"><div><div class="page-title">Contacts</div><div class="page-sub">Client representatives &amp; field engineers</div></div></div>
+ <div style="display:flex;gap:8px;margin-bottom:14px">
+  ${['client','engineers'].map(t=>`<button class="btn ${contactTab===t?'btn-primary':'btn-outline'}" onclick="contactTab='${t}';renderContacts()">${t==='client'?'Client contacts':'Engineers'}</button>`).join('')}
+ </div>
+ <div class="panel"><table class="tbl"><thead><tr><th>Name</th><th>${contactTab==='client'?'Client':'Role'}</th><th>Function</th><th>Mobile</th><th>Email</th></tr></thead><tbody>
+ ${contactTab==='client'?CONTACTS.map(c=>`<tr><td style="font-weight:600">${c.name}</td><td><span class="pill bg-blue">${clientName(c.clientId)}</span></td><td style="font-size:11px;color:var(--muted)"><b style="color:var(--text)">${c.title}</b> — ${c.fn}</td><td style="font-family:var(--mono);font-size:11px">${c.phone}</td><td><a href="mailto:${c.email}" style="color:var(--blue);font-family:var(--mono);font-size:11px">${c.email}</a></td></tr>`).join('')
+  :ENGINEERS.map(e=>`<tr><td style="font-weight:600">${e.name}</td><td style="font-size:12px">${e.role}</td><td style="font-size:11px;color:var(--muted)">Field engineer</td><td style="font-family:var(--mono);font-size:11px">+9XX XX XXX XXXX</td><td><a href="mailto:${e.name.split(' ')[0].toLowerCase()}@qey.ae" style="color:var(--blue);font-family:var(--mono);font-size:11px">${e.name.split(' ')[0].toLowerCase()}@qey.ae</a></td></tr>`).join('')}
+ </tbody></table></div>`;
+}
+
+/* ───────────────────── INTEGRATIONS ───────────────────── */
+function renderIntegrations(){
+ const svc=[['Zoho CRM','Clients · Contacts · Contracts','connected','Bidirectional sync · last run 4 min ago'],
+  ['Zoho Books','Invoices from signed-off jobs','connected','Outbound · 12 invoices this month'],
+  ['Zoho Sign','Client counter-signature on forms','connected','Webhook active'],
+  ['Zoho Inventory','Parts catalogue & usage','not','Connect to pull item catalogue']];
+ $('#view-integrations').innerHTML=`
+ <div class="page-header"><div><div class="page-title">Zoho Integration</div><div class="page-sub">Region-aware OAuth (accounts.zoho.sa) · tokens encrypted at rest</div></div><button class="btn btn-outline" onclick="toast('Reconciliation run — 0 conflicts (demo)')"><i class="ti ti-refresh"></i> Run reconciliation</button></div>
+ <div class="card-grid" style="margin-bottom:20px">${svc.map(s=>`<div class="card" style="padding:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="display:flex;gap:8px;align-items:center"><i class="ti ti-plug-connected" style="font-size:18px;color:${s[2]==='connected'?'var(--green)':'var(--muted)'}"></i><span style="font-weight:600;font-size:14px">${s[0]}</span></div><span class="pill ${s[2]==='connected'?'bg-green':'bg-slate'}">${s[2]==='connected'?'Connected':'Not connected'}</span></div><div style="font-size:12px">${s[1]}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${s[3]}</div><button class="btn ${s[2]==='connected'?'btn-outline':'btn-primary'}" style="width:100%;justify-content:center;margin-top:12px" onclick="toast('${s[2]==='connected'?'Manage':'Connecting '+s[0]} (demo)')">${s[2]==='connected'?'Manage':'Connect'}</button></div>`).join('')}</div>
+ <div class="panel"><div class="panel-head"><i class="ti ti-alert-triangle" style="color:var(--amber)"></i> Sync issues — manual resolution</div>
+  <table class="tbl"><thead><tr><th>Entity</th><th>Field</th><th>FSM value</th><th>Zoho value</th><th>Resolve</th></tr></thead><tbody>
+  <tr><td style="font-weight:500">QST HVAC (client)</td><td>billing_address</td><td style="color:var(--muted)">Riyadh DC Park, Bldg 4</td><td style="color:var(--muted)">Riyadh DC Park, Bldg 4A</td><td><div style="display:flex;gap:5px"><button class="btn btn-outline btn-sm" onclick="toast('Kept FSM value')">Keep FSM</button><button class="btn btn-outline btn-sm" onclick="toast('Kept Zoho value')">Keep Zoho</button></div></td></tr>
+  </tbody></table>
+  <div style="padding:11px 14px;font-size:11px;color:var(--muted)">Policy: field-level last-writer-wins by modified time · billing fields default to Books · operational to FSM.</div></div>`;
+}
+
+/* ───────────────────── FORMS ───────────────────── */
+function renderForms(){
+ const ppm=TEMPLATES.filter(t=>t.jobType==='ppm'),svc=TEMPLATES.filter(t=>t.jobType!=='ppm');
+ const card=t=>{const fc=t.sections.reduce((n,s)=>n+s.fields.length,0);
+  return `<div class="card click" onclick="openForm('${t.key}')" style="padding:16px"><div style="display:flex;justify-content:space-between"><span style="font-weight:600;font-size:14px">${t.title}</span><i class="ti ti-chevron-right" style="color:var(--muted)"></i></div>
+   <div style="display:flex;gap:5px;margin:8px 0 10px">${t.assetType?`<span class="badge bg-sky">${t.assetType.replace('_',' ')}</span>`:''}${t.scope?`<span class="badge bg-violet">${FREQ_LABEL[t.scope]}</span>`:''}</div>
+   <div style="font-size:11px;color:var(--muted)">${t.sections.length} sections · ${fc} fields · sign-off</div></div>`;};
+ $('#view-forms').innerHTML=`
+ <div class="page-header"><div><div class="page-title">PPM &amp; Service Forms</div><div class="page-sub">Generated per asset type &amp; scope — data-driven, versioned, PDF-exportable</div></div><span class="live-badge"><i class="ti ti-wifi"></i> Fill &amp; print to PDF</span></div>
+ <div style="margin-bottom:8px;font-size:13px;font-weight:600"><i class="ti ti-clipboard-list" style="color:var(--blue)"></i> PPM forms</div>
+ <div class="card-grid" style="margin-bottom:24px">${ppm.map(card).join('')}</div>
+ <div style="margin-bottom:8px;font-size:13px;font-weight:600"><i class="ti ti-tools" style="color:var(--green)"></i> Service / corrective forms</div>
+ <div class="card-grid">${svc.map(card).join('')}</div>`;
+}
+
+let cur=null; // {tpl, answers, completed, signed}
+window.openForm=function(key){
+ const tpl=TEMPLATES.find(t=>t.key===key);
+ cur={tpl,answers:{},completed:false,signed:false};
+ drawForm();
+}
+function drawForm(){
+ const t=cur.tpl;
+ const field=(f)=>{
+  const v=cur.answers[f.key]??'';const dis=cur.completed?'disabled':'';
+  if(f.type==='textarea')return `<textarea ${dis} oninput="setA('${f.key}',this.value)">${v}</textarea>`;
+  if(f.type==='select')return `<select ${dis} onchange="setA('${f.key}',this.value)"><option value="">—</option>${f.options.map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join('')}</select>`;
+  if(f.type==='checkbox')return `<label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)"><input type="checkbox" ${dis} ${v?'checked':''} onchange="setA('${f.key}',this.checked)" style="width:16px;height:16px;accent-color:var(--blue)"> Done / verified</label>`;
+  if(f.type==='date')return `<input type="date" ${dis} value="${v}" onchange="setA('${f.key}',this.value)">`;
+  if(f.type==='number')return `<input type="number" ${dis} value="${v}" oninput="setA('${f.key}',this.value)">`;
+  if(f.type==='reading'){const oor=v!==''&&((f.min!=null&&+v<f.min)||(f.max!=null&&+v>f.max));
+   return `<div class="unit"><input type="number" ${dis} value="${v}" oninput="setA('${f.key}',this.value)" style="${oor?'border-color:var(--red)':''}">${f.unit?`<span style="font-size:12px;color:var(--muted)">${f.unit}</span>`:''}</div>${oor?`<div class="warn">Outside pass band (${f.min??'–'}–${f.max??'–'} ${f.unit})</div>`:''}`;}
+  if(f.type==='attachment')return `<button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;border-style:dashed" onclick="toast('Photo upload (demo)')"><i class="ti ti-paperclip"></i> Add photos</button>`;
+  if(f.type==='signature')return `<div style="font-size:11px;color:var(--muted)">Captured in the Sign-off panel.</div>`;
+  return `<input ${dis} value="${v}" oninput="setA('${f.key}',this.value)">`;
+ };
+ const sectionsHtml=t.sections.map(s=>`<div class="fsection"><div class="fsection-head">${s.title}</div><div class="fgrid">${s.fields.map(f=>`<div class="field ${(f.type==='textarea'||f.type==='attachment')?'col2':''}"><label>${f.label} ${f.required?'<span class="req">*</span>':''}</label>${field(f)}</div>`).join('')}</div></div>`).join('');
+ const missing=cur.missing||[];const warns=cur.warnings||[];
+ $('#view-forms').innerHTML=`
+ <div class="page-header"><div><div class="page-title">${t.title}</div><div class="page-sub">${cur.completed?'Completed':'Live demo — auto-saves locally · fill required fields to complete'}</div></div>
+  <div style="display:flex;gap:8px"><button class="btn btn-outline" onclick="renderForms()">Back to templates</button>${cur.completed?'':`<button class="btn btn-primary" onclick="completeForm()"><i class="ti ti-check"></i> Complete</button>`}</div></div>
+ ${missing.length?`<div class="banner err"><b>Required fields missing:</b> ${missing.join(', ')}</div>`:''}
+ ${cur.completed?`<div class="banner ok"><b><i class="ti ti-check"></i> Completed.</b>${warns.length?` <span style="color:#b45309">Out-of-band readings noted: ${warns.join(', ')}</span>`:''}</div>`:''}
+ <div class="form-wrap">${sectionsHtml}
+ ${cur.completed?`<div class="fsection"><div class="fsection-head">Sign-off &amp; report</div><div class="fgrid">
+   <div class="field"><label>Engineer Signature ${cur.signed?'<span style="color:var(--green)">✓ signed</span>':''}</label><canvas class="sig" id="sigpad" width="320" height="90"></canvas>
+   <div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-outline btn-sm" onclick="clearSig()"><i class="ti ti-eraser"></i> Clear</button><button class="btn btn-primary btn-sm" onclick="saveSig()"><i class="ti ti-check"></i> Save signature</button></div></div>
+   <div class="field" style="display:flex;flex-direction:column;justify-content:space-between"><div style="font-size:12px;color:var(--muted)">Generate the branded PDF report; it would be stored and auto-filed into the site's report folder.</div>
+   <button class="btn btn-primary" style="margin-top:10px" onclick="generateReport()"><i class="ti ti-file-text"></i> Generate PDF report</button></div>
+ </div></div>`:''}
+ </div>`;
+ if(cur.completed)initSig();
+}
+window.setA=function(k,v){cur.answers[k]=v;
+ // live out-of-range repaint only for readings (cheap: redraw on blur via re-render not needed each keystroke)
+ const f=cur.tpl.sections.flatMap(s=>s.fields).find(x=>x.key===k);
+ if(f&&f.type==='reading')drawForm();
+};
+window.completeForm=function(){
+ const miss=[];const warns=[];
+ cur.tpl.sections.forEach(s=>s.fields.forEach(f=>{
+  if(f.type==='signature'||f.type==='attachment')return;
+  const v=cur.answers[f.key];const empty=v===undefined||v===null||v==='';
+  if(f.required&&empty)miss.push(f.label);
+  if(f.type==='reading'&&!empty&&((f.min!=null&&+v<f.min)||(f.max!=null&&+v>f.max)))warns.push(`${f.label} (${v}${f.unit||''})`);
+ }));
+ if(miss.length){cur.missing=miss;cur.warnings=[];drawForm();toast('Required fields missing',true);return;}
+ cur.missing=[];cur.warnings=warns;cur.completed=true;drawForm();toast('Form completed'+(warns.length?' — with warnings':''));
+}
+
+/* signature pad */
+let sigCtx,sigDrawing=false,sigDirty=false;
+function initSig(){const c=$('#sigpad');if(!c)return;sigCtx=c.getContext('2d');sigCtx.lineWidth=2;sigCtx.lineCap='round';sigCtx.strokeStyle='#0d1b2e';
+ const pos=e=>{const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:(t.clientX-r.left)*(c.width/r.width),y:(t.clientY-r.top)*(c.height/r.height)};};
+ const down=e=>{sigDrawing=true;const p=pos(e);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);e.preventDefault();};
+ const move=e=>{if(!sigDrawing)return;const p=pos(e);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();sigDirty=true;e.preventDefault();};
+ const up=()=>{sigDrawing=false;};
+ c.onmousedown=down;c.onmousemove=move;c.onmouseup=up;c.onmouseleave=up;
+ c.ontouchstart=down;c.ontouchmove=move;c.ontouchend=up;
+}
+window.clearSig=function(){const c=$('#sigpad');if(c){sigCtx.clearRect(0,0,c.width,c.height);sigDirty=false;}}
+window.saveSig=function(){if(!sigDirty){toast('Draw a signature first',true);return;}cur.signed=true;cur.sigData=$('#sigpad').toDataURL('image/png');toast('Signature saved');drawForm();}
+
+/* printable PDF report */
+window.generateReport=function(){
+ const t=cur.tpl,a=cur.answers;
+ const rows=s=>s.fields.filter(f=>f.type!=='signature').map(f=>{let v=a[f.key];if(v===undefined||v===''||v===null)v='—';if(f.type==='checkbox')v=a[f.key]?'✓ Yes':'—';if(f.type==='reading'&&a[f.key]&&f.unit)v=a[f.key]+' '+f.unit;return `<tr><td class="k">${f.label}</td><td>${v}</td></tr>`;}).join('');
+ const sig=cur.sigData?`<img src="${cur.sigData}" style="max-height:64px"/>`:'<span style="color:#94a3b8">Not signed</span>';
+ const html=`<!doctype html><html><head><meta charset="utf-8"><title>${t.title}</title><style>
+  body{font-family:Arial,Helvetica,sans-serif;color:#0d1b2e;margin:0;font-size:12px}
+  .top{background:#0d1b2e;color:#fff;padding:16px 28px;border-bottom:3px solid #185FA5;display:flex;justify-content:space-between;align-items:center}
+  .brand{font-weight:700;letter-spacing:.08em}.brand small{color:#9db4d0;font-weight:400}
+  .doc{padding:22px 28px}h1{font-size:18px;margin:0 0 4px}.meta{color:#64748b;font-size:11px;margin-bottom:16px}.meta b{color:#0d1b2e}
+  section{margin-bottom:14px}h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin:0 0 6px}
+  table{width:100%;border-collapse:collapse}td{padding:4px 8px;border-bottom:1px solid #f1f5f9}td.k{color:#64748b;width:45%}
+  .sig{height:70px;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;width:260px;margin-top:6px}
+  .ft{color:#94a3b8;font-size:10px;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:8px}
+  @media print{.noprint{display:none}}
+ </style></head><body>
+  <div class="top"><div class="brand">QEY TECHNICAL <small>/ Field Service Management</small></div><div style="font-size:11px;color:#9db4d0">${t.title}</div></div>
+  <div class="doc"><h1>${t.title}</h1><div class="meta"><b>${a.site||'Site'}</b> · ${a.asset_tag||''} &nbsp;|&nbsp; Report ${a.report_no||'—'} · ${a.visit_date||''}<br>Engineer: ${a.engineer||'—'} · Generated ${new Date().toLocaleString('en-GB')}</div>
+  ${t.sections.map(s=>`<section><h2>${s.title}</h2><table>${rows(s)}</table></section>`).join('')}
+  <section><h2>Sign-off</h2><div style="display:flex;gap:30px"><div><div class="sig">${sig}</div><div style="font-size:11px;color:#64748b;margin-top:4px"><b>${a.engineer||'Engineer'}</b><br>Engineer · ${new Date().toLocaleDateString('en-GB')}</div></div></div></section>
+  <div class="ft">Generated by the QEY FSM platform. Values outside specified pass bands should be reviewed by the responsible engineer.</div>
+  <div class="noprint" style="margin-top:18px"><button onclick="window.print()" style="background:#185FA5;color:#fff;border:none;padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px">Print / Save as PDF</button></div>
+  </div></body></html>`;
+ const w=window.open('','_blank');
+ if(!w){toast('Pop-up blocked — allow pop-ups to view the report',true);return;}
+ w.document.write(html);w.document.close();
+ toast('Report generated — auto-filed into “'+(t.jobType==='corrective'?'Service Reports':'PPM Reports')+'” (demo)');
+}
+
+/* init */
+renderDashboard();
+</script>
+</body>
+</html>
