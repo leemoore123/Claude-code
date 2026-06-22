@@ -1,0 +1,55 @@
+# FSM Platform
+
+Field Service Management for a multi-client HVAC operation — client/contract
+management, an asset hierarchy (Clients → Sites/Vessels → Assets), recurring PPM
+scheduling with engineer dispatch, a data-driven PPM/service forms engine, and
+bidirectional Zoho sync (CRM / Books / Sign / Inventory).
+
+Built from two existing client document portals (QST data centres, Fincantieri
+fleet) — their visual language (navy/blue, IBM Plex, Tabler icons, card grids,
+folder browser) is preserved in the web design system.
+
+## Monorepo layout
+
+```
+apps/
+  web/    React + Vite + TS + Tailwind — UI & design system
+  api/    NestJS — scheduling, forms, Zoho OAuth/sync, PDF (workers)
+packages/
+  db/      Prisma schema + migrations + seed (the data model)
+  shared/  shared types, domain helpers, and ALL form-template definitions
+infra/     deploy config (later phases)
+docs/      architecture notes
+```
+
+## Status — Phase 0 / 1 (foundation)
+
+- ✅ Monorepo + design system reproducing the portal look
+- ✅ Full Prisma data model (`packages/db/prisma/schema.prisma`)
+- ✅ Data-driven PPM/service form definitions (`packages/shared/src/form-templates.ts`)
+  rendered by a working form renderer in the web app
+- ✅ Web views: Dashboard, Clients & Contracts, Sites & Assets (folder browser),
+  Schedule & Dispatch, PPM & Service Forms, Contacts, Zoho Integration
+- ✅ NestJS skeleton with PPM materializer + region-aware ZohoClient stubs
+- ⏳ Live persistence, scheduling materialization, PDF/e-sign, Zoho sync — Phases 2–5
+
+See the full plan in `docs/` and the approved implementation plan.
+
+## Develop
+
+```bash
+pnpm install
+
+# Web (runs standalone on seed/mock data — no backend needed)
+pnpm dev:web        # http://localhost:5173
+
+# API (needs DATABASE_URL etc. — copy .env.example → .env)
+pnpm db:generate
+pnpm dev:api        # http://localhost:3001/health
+
+# Seed the database with QST + Fincantieri demo data
+pnpm db:seed
+```
+
+The web app is intentionally runnable without the backend during Phase 0/1 so the
+UI can be reviewed immediately; data calls are swapped to the API in Phase 1+.

@@ -1,0 +1,19 @@
+{
+  "name": "fsm-platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Field Service Management platform — multi-client HVAC PPM & service operations",
+  "scripts": {
+    "dev:web": "pnpm --filter @fsm/web dev",
+    "dev:api": "pnpm --filter @fsm/api start:dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @fsm/db generate",
+    "db:seed": "pnpm --filter @fsm/db seed"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
