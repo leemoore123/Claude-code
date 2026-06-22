@@ -43,7 +43,19 @@ docs/      architecture notes
   controls, a "Run materializer" action, and transparent fallback to seed data
   when the API is offline
 
-**Phases 3–5 — forms persistence, Zoho sync, billing/e-sign** ⏳
+**Phase 3 — forms persistence, PDF & sign-off** ✅
+- `/form-templates` + `/submissions` API: create draft, autosave answers, complete
+  (server-side validation against the snapshotted schema — required fields block,
+  out-of-band readings warn), drawn sign-off, and **PDF generation** (Playwright)
+- Generated PDFs are stored and **auto-filed** into the site's PPM/Service report
+  folder as linked `Document` rows (idempotent)
+- Storage abstraction: local filesystem driver for dev/CI, Supabase Storage driver
+  in production; local objects served via `/files`
+- Web forms wired live: pick a job → autosaving draft → complete (with validation
+  + warnings) → canvas signature → generate & open the PDF; falls back to a local
+  demo when the API is offline
+
+**Phases 4–5 — Zoho sync, billing/e-sign** ⏳
 
 See the full plan in `docs/` and the approved implementation plan.
 

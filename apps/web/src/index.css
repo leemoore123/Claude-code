@@ -35,4 +35,7 @@
   .btn-outline {
     @apply bg-white text-brand border border-brand hover:bg-brand-light;
   }
+  .btn-sm {
+    @apply px-2.5 py-1 text-[11px];
+  }
 }

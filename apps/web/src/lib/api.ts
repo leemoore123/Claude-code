@@ -23,6 +23,27 @@ export interface ApiEngineer {
   engineer?: { skills: string[] } | null;
 }
 
+export interface ApiTemplate {
+  id: string;
+  name: string;
+  assetType: string | null;
+  jobType: string;
+  ppmScope: string | null;
+  schema: unknown;
+}
+
+export interface ApiSubmission {
+  id: string;
+  status: string;
+  answers: Record<string, unknown>;
+  pdfUrl: string | null;
+}
+
+export interface CompleteResult {
+  submission: ApiSubmission;
+  warnings: { key: string; label: string; value: number; min?: number; max?: number; unit?: string }[];
+}
+
 export interface ApiJob {
   id: string;
   summary: string | null;
@@ -54,4 +75,22 @@ export const api = {
     }),
   assign: (id: string, engineerId: string) =>
     http(`/jobs/${id}/assign`, { method: 'POST', body: JSON.stringify({ engineerId }) }),
+
+  // ── Forms / submissions ──
+  templates: () => http<ApiTemplate[]>('/form-templates'),
+  createSubmission: (body: { jobId: string; formTemplateId: string; assetId?: string }) =>
+    http<ApiSubmission>('/submissions', { method: 'POST', body: JSON.stringify(body) }),
+  saveAnswers: (id: string, answers: Record<string, unknown>) =>
+    http<ApiSubmission>(`/submissions/${id}/answers`, {
+      method: 'PATCH',
+      body: JSON.stringify({ answers }),
+    }),
+  completeSubmission: (id: string) =>
+    http<CompleteResult>(`/submissions/${id}/complete`, { method: 'POST' }),
+  signSubmission: (id: string, body: { signerRole: string; signerName: string; imageDataUrl?: string }) =>
+    http(`/submissions/${id}/sign`, { method: 'POST', body: JSON.stringify(body) }),
+  generatePdf: (id: string) =>
+    http<{ pdfUrl: string; filedInto: string }>(`/submissions/${id}/pdf`, { method: 'POST' }),
 };
+
+export const apiBase = BASE;
