@@ -1,4 +1,4 @@
 -- Author: Lee Moore
--- Select all columns from the employees table
-SELECT *
+-- Select the name and email columns from the employees table
+SELECT name, email
 FROM employees;
