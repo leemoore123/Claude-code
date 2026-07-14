@@ -1,4 +1,5 @@
 -- Author: Lee Moore
--- Select the name and email columns from the employees table
+-- Select the name and email of employees in the Marketing department
 SELECT name, email
-FROM employees;
+FROM employees
+WHERE department = 'Marketing';
