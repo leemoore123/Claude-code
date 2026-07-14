@@ -1,2 +1,13 @@
 // Author: Lee Moore
-console.log("🎉 Hello World! 🌍✨");
+
+const greetings = [
+  "🎉 Hello World! 🌍✨",      // English
+  "🎉 ¡Hola Mundo! 🌍✨",      // Spanish
+  "🎉 Bonjour le Monde! 🌍✨", // French
+  "🎉 Hallo Welt! 🌍✨",       // German
+  "🎉 Ciao Mondo! 🌍✨",       // Italian
+];
+
+for (const greeting of greetings) {
+  console.log(greeting);
+}
